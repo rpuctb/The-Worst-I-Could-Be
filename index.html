@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>CortisolDoesntExist</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Courier New', monospace;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none; position: fixed;
+  }
+  canvas { display: block; touch-action: none; cursor: crosshair; }
+
+  .intro {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 1s ease;
+  }
+  .intro.fade { opacity: 0; }
+  .intro.gone { display: none; }
+  .intro h1 {
+    color: #fff;
+    font-size: clamp(32px, 7vw, 64px);
+    letter-spacing: 6px;
+    font-weight: normal;
+    text-shadow: 0 0 30px rgba(255, 60, 60, 0.5);
+  }
+  .intro .hint {
+    margin-top: 30px;
+    color: #444;
+    font-size: clamp(10px, 1.4vw, 13px);
+    letter-spacing: 2px;
+    text-align: center;
+    line-height: 2;
+    display: none;
+  }
+  .intro.desktop .hint { display: block; }
+  .intro .handle {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #444;
+    font-size: 11px;
+    letter-spacing: 3px;
+  }
+
+  .phone-buttons {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    display: flex;
+    gap: 14px;
+    z-index: 50;
+    transition: opacity 0.5s ease;
+  }
+  .phone-buttons.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .phone-btn {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: rgba(20, 20, 20, 0.85);
+    border: 1.5px solid #555;
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+  }
+  .phone-btn:active {
+    background: #ff4444;
+    border-color: #ff4444;
+    transform: scale(0.92);
+  }
+  .phone-btn svg {
+    width: 28px;
+    height: 28px;
+    stroke: #fff;
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .phone-btn:active svg { stroke: #000; }
+
+  .vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 40;
+    background: radial-gradient(ellipse at center,
+      rgba(0,0,0,0) 30%,
+      rgba(40,0,0,0) 50%,
+      rgba(60,0,0,0.6) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .text-stage {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 45;
+    overflow: hidden;
+  }
+
+  .txt-wrap {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .flying-text {
+    position: relative;
+    color: #f0f0f0;
+    font-size: clamp(9px, 1.5vw, 15px);
+    letter-spacing: 1.2px;
+    text-align: center;
+    line-height: 1.4;
+    will-change: opacity, filter;
+    opacity: 0;
+    white-space: nowrap;
+    max-width: 92vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .flying-text-ghost {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: inherit;
+    font-family: inherit;
+    font-size: clamp(9px, 1.5vw, 15px);
+    letter-spacing: 1.2px;
+    text-align: center;
+    line-height: 1.4;
+    white-space: nowrap;
+    filter: blur(10px);
+    opacity: 0;
+    pointer-events: none;
+    will-change: opacity, transform;
+    max-width: 92vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .flying-text.special {
+    color: #ff3333;
+    font-weight: bold;
+    text-shadow: 0 0 24px rgba(255, 40, 40, 0.6);
+  }
+  .flying-text-ghost.spam {
+    color: #444;
+    opacity: 0.25;
+  }
+  .flying-text-ghost.special {
+    color: #ff2222;
+    font-weight: bold;
+  }
+
+  .end-screen {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.4s ease;
+  }
+  .end-screen.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .end-screen .smile {
+    color: #ff2222;
+    font-size: clamp(48px, 12vw, 120px);
+    letter-spacing: 8px;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 40px rgba(255, 40, 40, 0.8);
+  }
+</style>
+</head>
+<body>
+
+<div class="intro" id="intro">
+  <h1>have fun.</h1>
+  <div class="hint">
+    LMB — damage<br>
+    RMB — change perspective<br>
+    SPACE — clear
+  </div>
+  <div class="handle">@melakoi</div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div class="vignette" id="vignette"></div>
+<div class="text-stage" id="textStage"></div>
+
+<div class="phone-buttons" id="phoneButtons">
+  <div class="phone-btn" id="btnUrna">
+    <svg viewBox="0 0 40 40">
+      <path d="M12 12 L14 34 L26 34 L28 12 Z" />
+      <path d="M10 12 L30 12" />
+      <path d="M16 8 L24 8" />
+      <path d="M18 16 L18 30 M22 16 L22 30" />
+    </svg>
+  </div>
+  <div class="phone-btn" id="btnPerspective">
+    <svg viewBox="0 0 40 40">
+      <rect x="10" y="14" width="20" height="12" />
+      <path d="M10 20 L30 20" stroke-width="1" opacity="0.5" />
+    </svg>
+  </div>
+</div>
+
+<div class="end-screen" id="endScreen">
+  <div class="smile">: )</div>
+</div>
+
+<script>
+const intro = document.getElementById('intro');
+const isDesktop = !/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !('ontouchstart' in window);
+if (isDesktop) intro.classList.add('desktop');
+
+let introRemoved = false;
+function removeIntro() {
+  if (introRemoved) return;
+  introRemoved = true;
+  intro.classList.add('fade');
+  setTimeout(() => {
+    intro.classList.add('gone');
+    if (intro.parentNode) intro.parentNode.removeChild(intro);
+  }, 1100);
+}
+setTimeout(removeIntro, 2500);
+intro.addEventListener('click', removeIntro);
+intro.addEventListener('touchstart', removeIntro, { passive: true });
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+
+const camera = { x: 0, y: 0, zoom: 1, targetX: 0, targetY: 0, targetZoom: 1 };
+function updateCamera() {
+  camera.x += (camera.targetX - camera.x) * 0.15;
+  camera.y += (camera.targetY - camera.y) * 0.15;
+  camera.zoom += (camera.targetZoom - camera.zoom) * 0.15;
+}
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - W / 2) / camera.zoom + camera.x + W / 2,
+    y: (sy - H / 2) / camera.zoom + camera.y + H / 2
+  };
+}
+
+const TAU = Math.PI * 2;
+const G = 980;
+const FILM = 0.42;
+const FILM_RUN = 0.6;
+const RESERVE_K = 5;
+const BLEED_SPEED = 1;
+const MAX_LIVE = 700;
+const MAX_DROPLETS = 700;
+const TILE = 512;
+const MAX_TILES = 64;
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (t) => t * t * (3 - 2 * t);
+function gauss() {
+  let u = 0, v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+}
+const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mix = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+const shade = (c, f) => [clamp(c[0] * f, 0, 255), clamp(c[1] * f, 0, 255), clamp(c[2] * f, 0, 255)];
+
+function makeProfile(n, rough) {
+  const p = new Float32Array(n);
+  const ph = [rnd(0, TAU), rnd(0, TAU), rnd(0, TAU)];
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * TAU;
+    let v = 1;
+    v += rough * 0.9 * Math.sin(2 * th + ph[0]);
+    v += rough * 0.6 * Math.sin(3 * th + ph[1]);
+    v += rough * 0.4 * Math.sin(5 * th + ph[2]);
+    v += rnd(-rough, rough) * 0.35;
+    p[i] = clamp(v, 0.35, 1.8);
+  }
+  return p;
+}
+
+function blobPath(ctx, prof, a, b) {
+  const n = prof.length, T = TAU / n;
+  const lx = Math.cos((n - 1) * T) * a * prof[n - 1];
+  const ly = Math.sin((n - 1) * T) * b * prof[n - 1];
+  let cx = a * prof[0], cy = 0;
+  ctx.beginPath();
+  ctx.moveTo((lx + cx) / 2, (ly + cy) / 2);
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const nx = Math.cos(j * T) * a * prof[j];
+    const ny = Math.sin(j * T) * b * prof[j];
+    ctx.quadraticCurveTo(cx, cy, (cx + nx) / 2, (cy + ny) / 2);
+    cx = nx; cy = ny;
+  }
+  ctx.closePath();
+}
+
+function sizeSplit(total, n, sigma) {
+  const out = new Array(n);
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const s = Math.exp(gauss() * sigma);
+    out[i] = s * s * s;
+    sum += out[i];
+  }
+  for (let i = 0; i < n; i++) out[i] = Math.min(300, out[i] / (sum || 1) * total);
+  return out;
+}
+
+const state = {
+  weapon: '45',
+  bloodType: 'arterial',
+  surface: 'light',
+  view: 'top',
+  gravityRotation: 0,
+  targetRotation: 0,
+  mouseDown: false, lastShotTime: 0, shotInterval: 90,
+  mouseX: 0, mouseY: 0,
+  isPanning: false, panStartX: 0, panStartY: 0,
+  panCamStartX: 0, panCamStartY: 0,
+  lastPinchDist: 0, touchStartTime: 0, touchMoved: false
+};
+
+function getG() {
+  const a = state.gravityRotation;
+  return { x: Math.sin(a), y: Math.cos(a) };
+}
+
+const weaponList = ['stab', 'axe', 'chainsaw', 'claw', '9mm', '45', '500', 'shotgun', 'slug', 'gut'];
+const bloodList = ['arterial', 'venous', 'capillary'];
+
+const weaponData = {
+  stab:    { velocity: 1.8, count: 7,  size: 1.1, spread: 0.3,  severity: 2, splash: false,
+             goreCount: 0, bleedChance: 0.8, through: false, hitVolume: 90,   bruise: 0, kind: 'stab' },
+  axe:     { velocity: 3.5, count: 8,  size: 1.4, spread: 0.4,  severity: 3, splash: true,
+             goreCount: 2, bleedChance: 1.0, through: false, hitVolume: 400,  bruise: 0.3, kind: 'ragged' },
+  chainsaw:{ velocity: 4.0, count: 10, size: 1.5, spread: 0.45, severity: 4, splash: true,
+             goreCount: 4, bleedChance: 1.0, through: false, hitVolume: 700,  bruise: 0.2, kind: 'ragged' },
+  claw:    { velocity: 3.0, count: 6,  size: 1.2, spread: 0.35, severity: 3, splash: true,
+             goreCount: 1, bleedChance: 0.9, through: false, hitVolume: 300,  bruise: 0.15, kind: 'ragged' },
+  "9mm":   { velocity: 7,   count: 14, size: 1.2, spread: 0.55, severity: 2, splash: true,
+             goreCount: 0, bleedChance: 0.6, through: true,  hitVolume: 350,  bruise: 0.2 },
+  "45":    { velocity: 10,  count: 24, size: 1.7, spread: 0.7,  severity: 3, splash: true,
+             goreCount: 2, bleedChance: 0.9, through: true,  hitVolume: 700,  bruise: 0.3 },
+  "500":   { velocity: 15,  count: 40, size: 2.5, spread: 0.85, severity: 5, splash: true,
+             goreCount: 6, bleedChance: 1.0, through: true,  hitVolume: 1800, bruise: 0.35 },
+  shotgun: { velocity: 13,  count: 36, size: 1.9, spread: 1.3,  severity: 4, splash: true,
+             goreCount: 5, bleedChance: 1.0, through: false, hitVolume: 1500, bruise: 0.5, pellets: 7 },
+  slug:    { velocity: 17,  count: 50, size: 3.0, spread: 0.8,  severity: 6, splash: true,
+             goreCount: 8, bleedChance: 1.0, through: true,  hitVolume: 2600, bruise: 0.35 },
+  gut:     { velocity: 12,  count: 30, size: 2.8, spread: 1.0,  severity: 6, splash: true,
+             goreCount: 2, bleedChance: 1.0, through: false, hitVolume: 2200, bruise: 0.2, kind: 'gut' }
+};
+
+const bloodData = {
+  arterial: {
+    wet: [196, 24, 26], dry: [74, 16, 12], tissue: [188, 78, 70],
+    k: 5.2, pressure: 1.0, pulse: true, clot: 0.010, visc: 1.0, dryBase: 16, seepRate: 6, drips: false
+  },
+  venous: {
+    wet: [118, 14, 20], dry: [50, 11, 10], tissue: [140, 62, 58],
+    k: 6.5, pressure: 0.35, pulse: false, clot: 0.028, visc: 1.3, dryBase: 20, seepRate: 55, drips: true
+  },
+  capillary: {
+    wet: [178, 52, 56], dry: [100, 34, 28], tissue: [196, 120, 110],
+    k: 3.2, pressure: 0.12, pulse: false, clot: 0.05, visc: 0.7, dryBase: 10, seepRate: 30, drips: false
+  }
+};
+
+const surfaceData = {
+  light:    { bg: '#e8e4dc', porosity: 0.15, spread: 1.0, runMin: 22,  slip: 1.0, mu: 3.5, grain: 0.035 },
+  dark:     { bg: '#1a1a1a', porosity: 0.15, spread: 1.0, runMin: 22,  slip: 1.0, mu: 3.5, grain: 0.05 },
+  concrete: { bg: '#4a4a48', porosity: 0.70, spread: 0.8, runMin: 160, slip: 0.5, mu: 7.0, grain: 0.12 },
+  green:    { bg: '#00b140', porosity: 0.05, spread: 1.1, runMin: 16,  slip: 1.2, mu: 3.0, grain: 0 }
+};
+
+const droplets = [];
+const live = [];
+const pools = [];
+const wounds = [];
+const chunks = [];
+const mist = [];
+const counters = { stains: 0 };
+
+const tiles = new Map();
+function getTile(tx, ty) {
+  const key = tx + ',' + ty;
+  let t = tiles.get(key);
+  if (!t) {
+    if (tiles.size >= MAX_TILES) return null;
+    const c = document.createElement('canvas');
+    c.width = c.height = TILE;
+    t = { c, g: c.getContext('2d'), x: tx * TILE, y: ty * TILE };
+    tiles.set(key, t);
+  }
+  return t;
+}
+function bake(obj) {
+  const b = obj.bounds();
+  const tx0 = Math.floor(b.x0 / TILE), tx1 = Math.floor(b.x1 / TILE);
+  const ty0 = Math.floor(b.y0 / TILE), ty1 = Math.floor(b.y1 / TILE);
+  if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 16) return;
+  for (let ty = ty0; ty <= ty1; ty++) {
+    for (let tx = tx0; tx <= tx1; tx++) {
+      const t = getTile(tx, ty);
+      if (!t) continue;
+      t.g.save();
+      t.g.translate(-t.x, -t.y);
+      obj.paint(t.g, obj.dry, false);
+      t.g.restore();
+    }
+  }
+}
+
+class Wet {
+  constructor() { this.age = 0; this.dryTime = 10; this.done = false; }
+  get dry() { return this.age >= this.dryTime ? 1 : this.age / this.dryTime; }
+  update(dt) { this.age += dt; if (this.age >= this.dryTime) this.done = true; }
+}
+
+class Stain extends Wet {
+  constructor(x, y, vol, btKey, surfKey, angle, elong, opt) {
+    super();
+    opt = opt || {};
+    const bt = bloodData[btKey], sf = surfaceData[surfKey];
+    this.x = x; this.y = y; this.bt = bt; this.sf = sf; this.angle = angle;
+    const sev = opt.severity || 0;
+    this.severity = sev;
+    this.isWound = !!opt.isWound;
+
+    const spreadBoost = 1 + sev * 0.10;
+    const area = Math.max(0.5, vol) / FILM * sf.spread * spreadBoost;
+    const r0 = Math.sqrt(area / Math.PI);
+    this.r0 = r0;
+    const e = clamp(elong * (1 + sev * 0.08), 1, 6);
+    this.a = r0 * Math.sqrt(e);
+    this.b = r0 / Math.sqrt(e);
+
+    const roughBase = 0.07 + 0.10 * sf.porosity + 0.10 * Math.min(1, opt.energy || 0);
+    const rough = roughBase + sev * 0.09;
+    this.prof = makeProfile(12 + Math.min(12, sev * 2), rough);
+
+    this.thick = FILM * (1 + Math.min(1.5, r0 / 10));
+    this.alpha = clamp(1 - Math.exp(-bt.k * this.thick), 0.45, 0.96);
+    this.dryTime = bt.dryBase * clamp(0.15 + r0 / 14, 0.2, 1.8) * (1 - 0.55 * sf.porosity);
+    this.tail = e > 1.8 ? r0 * rnd(0.4, 0.9) * Math.min(3, e - 1) : 0;
+
+    this.petals = [];
+    if (this.isWound && sev >= 2) {
+      const pc = Math.floor(sev * 1.8) + Math.floor(rnd(0, 3));
+      for (let i = 0; i < pc; i++) {
+        this.petals.push({
+          angle: rnd(0, TAU),
+          length: r0 * rnd(0.8, 2.2) * (1 + sev * 0.12),
+          width: r0 * rnd(0.15, 0.45),
+          bend: rnd(-0.5, 0.5)
+        });
+      }
+    }
+
+    this.tears = [];
+    if (this.isWound && sev >= 3 && r0 > 6) {
+      const numTears = Math.min(4, Math.floor(sev * 0.5));
+      for (let i = 0; i < numTears; i++) {
+        this.tears.push({
+          a1: rnd(0, TAU),
+          r1: rnd(0, r0 * 0.5),
+          a2: rnd(0, TAU),
+          r2: rnd(r0 * 0.4, r0 * 1.1),
+          w: Math.max(0.7, r0 * 0.12) * rnd(0.8, 1.2)
+        });
+      }
+    }
+
+    this.core = null;
+    if (this.isWound) {
+      const coreProf = makeProfile(10, 0.35);
+      this.core = {
+        r: r0 * (0.55 + sev * 0.03),
+        prof: coreProf,
+        angle: rnd(0, TAU),
+        stretch: rnd(0.85, 1.15)
+      };
+    }
+
+    this.sats = [];
+    const ns = opt.sat || 0;
+    for (let i = 0; i < ns; i++) {
+      const d = this.a + this.tail + r0 * rnd(0.3, 2.2);
+      const lat = rnd(-1, 1) * (this.b + d * 0.25);
+      this.sats.push({ x: d, y: lat, r: Math.max(0.35, r0 * rnd(0.07, 0.2)) });
+    }
+
+    let ext = Math.max(this.a, this.b) * 1.3 + this.tail;
+    for (const p of this.petals) ext = Math.max(ext, p.length + p.width);
+    for (const s of this.sats) ext = Math.max(ext, Math.hypot(s.x, s.y) + s.r);
+    this.ext = ext + 1;
+    counters.stains++;
+  }
+  bounds() { return { x0: this.x - this.ext, y0: this.y - this.ext, x1: this.x + this.ext, y1: this.y + this.ext }; }
+
+  paint(ctx, dry, liveDraw) {
+    const bt = this.bt, e = smooth(dry);
+    const c = mix(bt.wet, bt.dry, e);
+    const A = this.alpha;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.save();
+    ctx.rotate(this.angle);
+
+    for (const p of this.petals) {
+      ctx.save();
+      ctx.rotate(p.angle);
+      ctx.beginPath();
+      ctx.moveTo(0, -p.width * 0.5);
+      ctx.quadraticCurveTo(p.length * 0.5, p.bend * p.length * 0.4 - p.width * 0.5, p.length, p.bend * p.length * 0.5);
+      ctx.quadraticCurveTo(p.length * 0.5, p.bend * p.length * 0.4 + p.width * 0.5, 0, p.width * 0.5);
+      ctx.closePath();
+      ctx.fillStyle = rgba(shade(c, 0.9), A * 0.85);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    blobPath(ctx, this.prof, this.a * 1.14, this.b * 1.14);
+    ctx.fillStyle = rgba(c, A * 0.42);
+    ctx.fill();
+
+    if (this.tail > 0) {
+      const a = this.a, t = this.tail, b = this.b;
+      ctx.beginPath();
+      ctx.moveTo(a * 0.45, -b * 0.6);
+      ctx.quadraticCurveTo(a + t * 0.45, -b * 0.22, a + t, 0);
+      ctx.quadraticCurveTo(a + t * 0.45, b * 0.22, a * 0.45, b * 0.6);
+      ctx.closePath();
+      ctx.fillStyle = rgba(c, A * 0.9);
+      ctx.fill();
+    }
+
+    blobPath(ctx, this.prof, this.a, this.b);
+    if (this.r0 > 5) {
+      const R = Math.max(this.a, this.b) * 1.1;
+      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+      gr.addColorStop(0, rgba(shade(c, 0.7), A));
+      gr.addColorStop(0.6, rgba(c, A));
+      gr.addColorStop(1, rgba(shade(c, 1.08), A * 0.85));
+      ctx.fillStyle = gr;
+    } else {
+      ctx.fillStyle = rgba(c, A);
+    }
+    ctx.fill();
+
+    if (e > 0.3 && this.r0 > 3.2) {
+      ctx.lineWidth = Math.min(1.4, this.r0 * 0.18);
+      ctx.strokeStyle = rgba(shade(c, 0.62), 0.55 * e);
+      ctx.stroke();
+    }
+
+    if (this.core) {
+      ctx.save();
+      ctx.rotate(this.core.angle);
+      blobPath(ctx, this.core.prof, this.core.r * this.core.stretch, this.core.r / this.core.stretch);
+      ctx.fillStyle = 'rgba(42, 0, 0, 0.95)';
+      ctx.fill();
+      const innerR = this.core.r * 0.62;
+      blobPath(ctx, this.core.prof, innerR * this.core.stretch, innerR / this.core.stretch);
+      ctx.fillStyle = 'rgba(15, 0, 0, 0.98)';
+      ctx.fill();
+      ctx.lineWidth = Math.max(0.8, this.core.r * 0.14);
+      ctx.strokeStyle = 'rgba(90, 10, 10, 0.75)';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (const t of this.tears) {
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(t.a1) * t.r1, Math.sin(t.a1) * t.r1);
+      ctx.lineTo(Math.cos(t.a2) * t.r2, Math.sin(t.a2) * t.r2);
+      ctx.lineWidth = t.w;
+      ctx.strokeStyle = rgba(shade(c, 0.3), A * 0.8);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    if (this.sats.length) {
+      ctx.beginPath();
+      for (const s of this.sats) { ctx.moveTo(s.x + s.r, s.y); ctx.arc(s.x, s.y, s.r, 0, TAU); }
+      ctx.fillStyle = rgba(c, A);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+}
+
+class RaggedWound extends Wet {
+  constructor(x, y, length, width, angle, btKey, surfKey, severity) {
+    super();
+    this.x = x; this.y = y;
+    this.length = length;
+    this.width = width;
+    this.angle = angle;
+    this.bt = bloodData[btKey];
+    this.sf = surfaceData[surfKey];
+    this.severity = severity;
+    this.dryTime = this.bt.dryBase * 1.8;
+    this.petals = [];
+    const pc = 6 + Math.floor(severity * 2);
+    for (let i = 0; i < pc; i++) {
+      const along = rnd(-1, 1);
+      const side = Math.random() > 0.5 ? 1 : -1;
+      this.petals.push({
+        along,
+        side,
+        len: rnd(0.3, 1.1) * width * (2 + severity * 0.5),
+        width: rnd(0.4, 0.9) * width,
+        jitter: rnd(-0.3, 0.3)
+      });
+    }
+    this.tears = [];
+    const tc = 3 + Math.floor(severity * 1.5);
+    for (let i = 0; i < tc; i++) {
+      this.tears.push({
+        along: rnd(-0.9, 0.9),
+        depth: rnd(0.4, 1.0),
+        off: rnd(-0.3, 0.3)
+      });
+    }
+    this.prof = makeProfile(24, 0.28);
+  }
+  bounds() {
+    const r = this.length * 0.6 + this.width * 4 + 6;
+    return { x0: this.x - r, y0: this.y - r, x1: this.x + r, y1: this.y + r };
+  }
+  paint(ctx, dry) {
+    const e = smooth(dry);
+    const c = mix(this.bt.wet, this.bt.dry, e);
+    const A = clamp(0.9 - e * 0.2, 0.55, 0.96);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    const L = this.length * 0.5;
+    const wd = this.width;
+
+    for (const p of this.petals) {
+      const px = p.along * L;
+      const py = p.side * wd * 0.5;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate((p.side > 0 ? -1 : 1) * Math.PI * 0.5 + p.jitter);
+      ctx.beginPath();
+      const n = this.prof.length, T = TAU / n;
+      for (let i = 0; i <= n; i++) {
+        const t = (i % n) * T;
+        const bx = Math.cos(t) * p.len * 0.5 * this.prof[i % n];
+        const by = Math.sin(t) * p.width * 0.5 * this.prof[i % n];
+        if (i === 0) ctx.moveTo(bx, by);
+        else ctx.lineTo(bx, by);
+      }
+      ctx.closePath();
+      ctx.fillStyle = rgba(shade(c, 0.85), A * 0.8);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.beginPath();
+    const n = this.prof.length, T = TAU / n;
+    for (let i = 0; i <= n; i++) {
+      const t = (i % n) * T;
+      const bx = Math.cos(t) * L * this.prof[i % n];
+      const by = Math.sin(t) * wd * this.prof[i % n] * 1.4;
+      if (i === 0) ctx.moveTo(bx, by);
+      else ctx.lineTo(bx, by);
+    }
+    ctx.closePath();
+    const gr = ctx.createLinearGradient(-L, 0, L, 0);
+    gr.addColorStop(0, rgba(shade(c, 1.05), A * 0.85));
+    gr.addColorStop(0.5, rgba(shade(c, 0.55), A));
+    gr.addColorStop(1, rgba(shade(c, 1.05), A * 0.85));
+    ctx.fillStyle = gr;
+    ctx.fill();
+
+    for (const t of this.tears) {
+      ctx.beginPath();
+      ctx.moveTo(t.along * L, -wd * t.depth);
+      ctx.lineTo(t.along * L + t.off * L * 0.15, 0);
+      ctx.lineTo(t.along * L, wd * t.depth);
+      ctx.lineWidth = Math.max(1, wd * 0.35);
+      ctx.strokeStyle = 'rgba(50, 5, 5, 0.95)';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.9, 0);
+    ctx.lineTo(L * 0.9, 0);
+    ctx.lineWidth = Math.max(1.4, wd * 0.9);
+    ctx.strokeStyle = 'rgba(55, 5, 5, 0.95)';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.85, 0);
+    ctx.lineTo(L * 0.85, 0);
+    ctx.lineWidth = Math.max(0.8, wd * 0.45);
+    ctx.strokeStyle = 'rgba(15, 0, 0, 0.98)';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+class Pool extends Wet {
+  constructor(x, y, btKey, surfKey) {
+    super();
+    this.x = x; this.y = y;
+    this.bt = bloodData[btKey]; this.sf = surfaceData[surfKey];
+    this.V = 0; this.R = 0.5; this.sources = 0;
+    this.prof = makeProfile(16, 0.16);
+    this.angle = rnd(0, TAU);
+    this.stretch = rnd(0.9, 1.15);
+    this.isPool = true;
+    this.dryTime = 20;
+  }
+  get depth() { return Math.min(FILM * 3.2, FILM * Math.pow(1 + this.V / 300, 0.45)); }
+  get target() { return Math.sqrt(this.V / (this.depth * Math.PI) * this.sf.spread); }
+  add(v) {
+    const first = this.V <= 0;
+    this.V += v;
+    if (first) this.R = this.target * 0.5;
+    this.age *= 0.5;
+    this.done = false;
+  }
+  update(dt) {
+    this.age += dt;
+    this.R += (this.target - this.R) * (1 - Math.exp(-dt * 1.4 / this.bt.visc));
+    this.dryTime = this.bt.dryBase * clamp(0.35 + (this.depth / FILM) * 0.5, 0.5, 2.4) * (1 - 0.55 * this.sf.porosity) * 1.8;
+    if (this.sources <= 0 && this.age >= this.dryTime) this.done = true;
+  }
+  bounds() { const r = this.R * 1.3 * Math.max(this.stretch, 1 / this.stretch) + 6; return { x0: this.x - r, y0: this.y - r, x1: this.x + r, y1: this.y + r }; }
+  paint(ctx, dry) {
+    if (this.R < 0.6) return;
+    const bt = this.bt, e = smooth(dry);
+    const c = mix(bt.wet, bt.dry, e);
+    const A = clamp(1 - Math.exp(-bt.k * this.depth * 1.6), 0.5, 0.97);
+    const a = this.R * this.stretch, b = this.R / this.stretch;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    blobPath(ctx, this.prof, a * 1.08, b * 1.08);
+    ctx.fillStyle = rgba(c, A * 0.4);
+    ctx.fill();
+    blobPath(ctx, this.prof, a, b);
+    const Rm = Math.max(a, b) * 1.1;
+    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, Rm);
+    gr.addColorStop(0, rgba(shade(c, 0.62), A));
+    gr.addColorStop(0.55, rgba(c, A));
+    gr.addColorStop(1, rgba(shade(c, 1.05), A * 0.9));
+    ctx.fillStyle = gr;
+    ctx.fill();
+    if (e > 0.25) {
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = rgba(shade(c, 0.58), 0.5 * e);
+      ctx.stroke();
+    }
+    if (e > 0.35 && this.R > 10) {
+      blobPath(ctx, this.prof, a * 0.45, b * 0.45);
+      ctx.fillStyle = rgba([40, 6, 6], 0.45 * e);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function findPool(x, y) {
+  for (const p of pools) {
+    if (p.done || p.baked) continue;
+    const dx = p.x - x, dy = p.y - y, r = p.R + 2;
+    if (dx * dx + dy * dy < r * r) return p;
+  }
+  return null;
+}
+function getPoolAt(x, y, btKey, surfKey) {
+  let p = findPool(x, y);
+  if (!p) {
+    p = new Pool(x, y, btKey, surfKey);
+    live.push(p); pools.push(p);
+  }
+  return p;
+}
+
+class RibbonWet extends Wet {
+  constructor(btKey, surfKey, alpha) {
+    super();
+    this.bt = bloodData[btKey]; this.sf = surfaceData[surfKey];
+    this.pts = []; this.alpha = alpha;
+    this.x0 = 1e9; this.y0 = 1e9; this.x1 = -1e9; this.y1 = -1e9;
+  }
+  push(x, y, w) {
+    this.pts.push({ x, y, w });
+    if (x < this.x0) this.x0 = x; if (x > this.x1) this.x1 = x;
+    if (y < this.y0) this.y0 = y; if (y > this.y1) this.y1 = y;
+  }
+  bounds() { const m = 9; return { x0: this.x0 - m, y0: this.y0 - m, x1: this.x1 + m, y1: this.y1 + m }; }
+
+  outlineSmooth(ctx, mul) {
+    const p = this.pts, n = p.length;
+    if (n < 2) return;
+    const L = [], R = [];
+    for (let i = 0; i < n; i++) {
+      const a = p[Math.max(0, i - 1)], b = p[Math.min(n - 1, i + 1)];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const l = Math.hypot(dx, dy) || 1;
+      dx /= l; dy /= l;
+      const hw = p[i].w * 0.5 * mul;
+      L.push({ x: p[i].x - dy * hw, y: p[i].y + dx * hw });
+      R.push({ x: p[i].x + dy * hw, y: p[i].y - dx * hw });
+    }
+    ctx.beginPath();
+    ctx.moveTo(L[0].x, L[0].y);
+    for (let i = 1; i < n - 1; i++) {
+      const cx = (L[i].x + L[i + 1].x) / 2;
+      const cy = (L[i].y + L[i + 1].y) / 2;
+      ctx.quadraticCurveTo(L[i].x, L[i].y, cx, cy);
+    }
+    ctx.lineTo(L[n - 1].x, L[n - 1].y);
+    for (let i = n - 2; i > 0; i--) {
+      const cx = (R[i].x + R[i - 1].x) / 2;
+      const cy = (R[i].y + R[i - 1].y) / 2;
+      ctx.quadraticCurveTo(R[i].x, R[i].y, cx, cy);
+    }
+    ctx.lineTo(R[0].x, R[0].y);
+    const cx0 = (R[0].x + L[0].x) / 2;
+    const cy0 = (R[0].y + L[0].y) / 2;
+    ctx.quadraticCurveTo(L[0].x, L[0].y, cx0, cy0);
+    ctx.closePath();
+  }
+}
+
+class Run extends RibbonWet {
+  constructor(src, x, y, btKey, surfKey, V, delay) {
+    super(btKey, surfKey, 0.93);
+    this.src = src;
+    this.V = V;
+    this.delay = delay || 0;
+    this.hx = x;
+    this.hy = y;
+    this.phase = rnd(0, TAU);
+    this.trav = 0;
+    this.finished = false;
+    this.dryTime = this.bt.dryBase * 1.6;
+    this.w0 = src ? src.size * 1.15 : 1.2;
+    this.colorBase = src ? src.bt.wet.slice() : this.bt.wet.slice();
+    this.speedMul = rnd(1.4, 2.6);
+    this.push(x, y, this.w0);
+  }
+
+  finish(w) {
+    this.finished = true;
+    const last = this.pts[this.pts.length - 1];
+    if (last) last.w = Math.max(0.6, w * 0.85);
+    this.x0 = Math.min(this.x0, this.hx - 6);
+    this.x1 = Math.max(this.x1, this.hx + 6);
+    this.y0 = Math.min(this.y0, this.hy - 6);
+    this.y1 = Math.max(this.y1, this.hy + 6);
+  }
+
+  update(dt) {
+    this.age += dt * (this.finished ? 1 : 0.15);
+    if (this.finished && this.age >= this.dryTime) { this.done = true; return; }
+    if (this.finished || state.view !== 'side') return;
+    if (this.delay > 0) { this.delay -= dt; return; }
+
+    let flow;
+    if (this.src && this.src.alive) {
+      this.V += this.src.take(this.src.runFlow * dt);
+      flow = this.src.runFlow;
+    } else {
+      this.src = null;
+      flow = this.V * 0.4;
+    }
+
+    const baseW = this.src ? this.src.size * 1.15 : this.w0;
+    const w = clamp(baseW * (0.85 + 0.15 * Math.sqrt(flow + 1)), 0.7, 8);
+    const sp = clamp(25 + 14 * Math.sqrt(flow + 1), 18, 200) * this.sf.slip / this.bt.visc * this.speedMul;
+
+    let ds = sp * dt;
+    const need = w * FILM_RUN * ds;
+    if (need > this.V) ds = this.V / (w * FILM_RUN);
+    if (ds < 0.01) {
+      if (!this.src && this.V < 0.3) this.finish(w);
+      return;
+    }
+    this.V -= w * FILM_RUN * ds;
+
+    const g = getG();
+    const ang = Math.atan2(g.y, g.x) + Math.sin(this.trav * 0.06 + this.phase) * 0.18 / (1 + w * 0.3);
+    this.hx += Math.cos(ang) * ds;
+    this.hy += Math.sin(ang) * ds;
+    this.trav += ds;
+
+    const last = this.pts[this.pts.length - 1];
+    const dist = Math.hypot(this.hx - last.x, this.hy - last.y);
+    if (dist > 1.2) {
+      const steps = Math.ceil(dist / 1.2);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const ix = last.x + (this.hx - last.x) * t;
+        const iy = last.y + (this.hy - last.y) * t;
+        this.push(ix, iy, w);
+      }
+    } else {
+      last.w = w;
+    }
+
+    if (!this.src && this.V < 0.25) this.finish(w);
+  }
+
+  paint(ctx, dry) {
+    const e = smooth(dry);
+    const c = mix(this.colorBase, shade(this.colorBase, 0.55), e * 0.7);
+    if (this.pts.length >= 2) {
+      ctx.save();
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      this.outlineSmooth(ctx, 1.35);
+      ctx.fillStyle = rgba(c, this.alpha * 0.35);
+      ctx.fill();
+      this.outlineSmooth(ctx, 1.0);
+      ctx.fillStyle = rgba(c, this.alpha);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+class Smear extends RibbonWet {
+  constructor(x, y, btKey, surfKey) {
+    super(btKey, surfKey, 0.62);
+    this.finished = false;
+    this.dryTime = this.bt.dryBase * 0.9;
+    this.push(x, y, 1);
+  }
+  add(x, y, w) {
+    const l = this.pts[this.pts.length - 1];
+    if (Math.hypot(x - l.x, y - l.y) > 2.2) this.push(x, y, w);
+    else l.w = w;
+  }
+  finish() { this.finished = true; }
+  update(dt) {
+    this.age += dt * (this.finished ? 1 : 0.1);
+    if (this.finished && this.age >= this.dryTime) this.done = true;
+  }
+  paint(ctx, dry) {
+    const bt = this.bt, e = smooth(dry);
+    const c = mix(bt.wet, bt.dry, e);
+    if (this.pts.length >= 2) {
+      this.outlineSmooth(ctx, 1.35);
+      ctx.fillStyle = rgba(c, this.alpha * 0.38);
+      ctx.fill();
+      this.outlineSmooth(ctx, 1.0);
+      ctx.fillStyle = rgba(c, this.alpha);
+      ctx.fill();
+    }
+  }
+}
+
+class Cloth extends Wet {
+  constructor(x, y, vol, btKey) {
+    super();
+    this.x = x; this.y = y; this.bt = bloodData[btKey];
+    this.maxR = Math.sqrt(vol / 0.28 / Math.PI);
+    this.R = 2;
+    this.prof = makeProfile(14, 0.14);
+    this.angle = rnd(0, TAU);
+    this.dryTime = 28;
+  }
+  update(dt) {
+    super.update(dt);
+    this.R += (this.maxR - this.R) * (1 - Math.exp(-dt * 0.35));
+  }
+  bounds() { const r = this.maxR * 1.5 + 4; return { x0: this.x - r, y0: this.y - r, x1: this.x + r, y1: this.y + r }; }
+  paint(ctx, dry) {
+    const c = shade(mix(this.bt.wet, this.bt.dry, smooth(dry)), 0.82);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    blobPath(ctx, this.prof, this.R, this.R);
+    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, this.R * 1.2);
+    gr.addColorStop(0, rgba(shade(c, 0.7), 0.9));
+    gr.addColorStop(0.65, rgba(c, 0.8));
+    gr.addColorStop(1, rgba(c, 0));
+    ctx.fillStyle = gr;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+class Bruise extends Wet {
+  constructor(x, y, size) {
+    super();
+    this.x = x; this.y = y; this.size = size;
+    this.growRate = rnd(0.5, 1);
+    this.maxSize = size * rnd(1.5, 2.5);
+    this.prof = makeProfile(16, 0.16);
+    this.coreSize = rnd(0.5, 0.8);
+    this.dryTime = 40;
+  }
+  update(dt) {
+    super.update(dt);
+    if (this.size < this.maxSize) this.size += this.growRate * dt * 3;
+  }
+  bounds() { const r = this.maxSize * 1.5 + 4; return { x0: this.x - r, y0: this.y - r, x1: this.x + r, y1: this.y + r }; }
+  paint(ctx) {
+    let r, g, b;
+    const t = this.age;
+    if (t < 4) { r = 120; g = 30; b = 60; }
+    else if (t < 10) { const k = (t - 4) / 6; r = 120 - k * 30; g = 30 + k * 40; b = 60 + k * 10; }
+    else if (t < 20) { const k = (t - 10) / 10; r = 90 + k * 40; g = 70 + k * 50; b = 70 - k * 30; }
+    else { const k = Math.min(1, (t - 20) / 15); r = 130 + k * 50; g = 120 + k * 50; b = 40 + k * 30; }
+    const alpha = Math.min(0.75, this.age * 0.3);
+    if (alpha <= 0.01) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    blobPath(ctx, this.prof, this.size, this.size);
+    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+    gr.addColorStop(0, `rgba(${r * 0.5 | 0},${g * 0.5 | 0},${b * 0.5 | 0},${alpha})`);
+    gr.addColorStop(this.coreSize, `rgba(${r | 0},${g | 0},${b | 0},${alpha * 0.7})`);
+    gr.addColorStop(0.85, `rgba(${r | 0},${g | 0},${b | 0},${alpha * 0.3})`);
+    gr.addColorStop(1, `rgba(${Math.min(255, r * 1.2) | 0},${Math.min(255, g * 1.2) | 0},${Math.min(255, b * 1.2) | 0},0)`);
+    ctx.fillStyle = gr;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function impact(x, y, vol, btKey, surfKey, vx, vy, vn, view) {
+  if (vol < 0.4) return;
+  const bt = bloodData[btKey], sf = surfaceData[surfKey];
+  const sp = Math.hypot(vx, vy), sp3 = Math.hypot(sp, vn) || 1;
+  const sinA = clamp(Math.abs(vn) / sp3, 0.2, 1);
+  const elong = clamp(1 / sinA, 1, 5);
+  const ang = sp > 1 ? Math.atan2(vy, vx) : rnd(0, TAU);
+  const r = Math.cbrt(vol * 0.2387);
+  const energy = r * sp3 * sp3 / 1e6;
+  const satFrac = clamp((energy - 0.15) * 0.22, 0, 0.28);
+  let main = vol * (1 - satFrac);
+
+  if (view === 'top') {
+    const p = findPool(x, y);
+    if (p) { p.add(vol); return; }
+  } else {
+    if (main > sf.runMin * bt.visc) {
+      const runV = main * 0.45;
+      main -= runV;
+      live.push(new Run(null, x, y, btKey, surfKey, runV, rnd(0.3, 1.2)));
+    }
+  }
+  const sat = satFrac > 0.02 ? Math.round(2 + satFrac * 18) : (Math.random() < 0.25 ? 1 : 0);
+  live.push(new Stain(x, y, main, btKey, surfKey, ang, elong, { sat, energy }));
+}
+
+class Droplet {
+  constructor(x, y, h, vx, vy, vh, vol, btKey, view) {
+    this.x = x; this.y = y; this.h = h;
+    this.vx = vx; this.vy = vy; this.vh = vh;
+    this.vol = vol; this.btKey = btKey; this.bt = bloodData[btKey];
+    this.view = view; this.surfKey = state.surface;
+    this.r = Math.cbrt(vol * 0.2387);
+    this.drag = 0.22 + 1.1 / (1 + 1.6 * this.r);
+    this.alive = true; this.t = 0;
+  }
+  update(dt) {
+    this.t += dt;
+    if (this.view === 'top') this.vh -= G * dt;
+    else { const g = getG(); this.vx += g.x * G * dt; this.vy += g.y * G * dt; }
+    const f = Math.exp(-this.drag * dt);
+    this.vx *= f; this.vy *= f; this.vh *= f;
+    this.x += this.vx * dt; this.y += this.vy * dt; this.h += this.vh * dt;
+    if (this.h <= 0) {
+      this.alive = false;
+      impact(this.x, this.y, this.vol, this.btKey, this.surfKey, this.vx, this.vy, this.vh, this.view);
+      return;
+    }
+    if (this.t > 6 || Math.abs(this.x - camera.x) > 6000 || Math.abs(this.y - camera.y) > 6000) this.alive = false;
+  }
+}
+
+function spawnDrop(x, y, vol, btKey, speed, ang, hMax) {
+  if (vol < 0.4) return;
+  const vx = Math.cos(ang) * speed, vy = Math.sin(ang) * speed;
+  x += rnd(-2, 2); y += rnd(-2, 2);
+  if (state.view === 'top') {
+    droplets.push(new Droplet(x, y, rnd(14, hMax || 55), vx, vy, speed * rnd(-0.05, 0.45), vol, btKey, 'top'));
+  } else {
+    droplets.push(new Droplet(x, y, rnd(6, Math.min(45, hMax || 45)), vx, vy, -(30 + speed * rnd(0.05, 0.4)), vol, btKey, 'side'));
+  }
+}
+
+class Wound {
+  constructor(x, y, w, btKey, normal, kind) {
+    this.x = x; this.y = y; this.w = w;
+    this.btKey = btKey; this.bt = bloodData[btKey];
+    this.surfKey = state.surface;
+    this.normal = normal; this.kind = kind;
+    this.reserve0 = w.hitVolume * RESERVE_K * (kind === 'exit' ? 0.8 : 1);
+    this.reserveMax = this.reserve0 * 3;
+    this.reserve = this.reserve0;
+    this.sevF = 0.6 + 0.18 * w.severity;
+    this.age = 0; this.alive = true;
+    this.pulse = Math.random(); this.rate = rnd(1.1, 1.7);
+    this.pool = null; this.run = null; this.runFlow = 0; this.dripAcc = 0; this.dripVol = rnd(14, 28);
+    this.prof = makeProfile(9, 0.25);
+    this.size = 2 + w.severity * 2.2;
+    this.angle = Math.random() * TAU;
+    this.speedMul = rnd(1.4, 2.6);
+  }
+  get frac() { return this.reserve / this.reserve0; }
+  get pressure() {
+    const clot = Math.exp(-this.bt.clot * this.age * (1.6 - this.frac));
+    return this.bt.pressure * this.sevF * clot * (0.3 + 0.7 * this.frac);
+  }
+  take(v) {
+    const t = Math.max(0, Math.min(v, this.reserve));
+    this.reserve -= t;
+    return t;
+  }
+  ensurePool() {
+    if (!this.pool || this.pool.done || this.pool.baked) {
+      this.pool = getPoolAt(this.x, this.y, this.btKey, this.surfKey);
+      this.pool.sources++;
+    }
+    return this.pool;
+  }
+  end() {
+    this.alive = false;
+    if (this.pool) { this.pool.sources = Math.max(0, this.pool.sources - 1); this.pool = null; }
+    if (this.run) { this.run.src = null; this.run = null; }
+  }
+  emit(vol, speed, ang) { spawnDrop(this.x, this.y, vol, this.btKey, speed, ang); }
+  deposit(v) {
+    if (v <= 0) return;
+    if (state.view === 'top') this.ensurePool().add(v);
+    else {
+      if (!this.run || this.run.finished) {
+        this.run = new Run(this, this.x, this.y, this.btKey, this.surfKey, 0, 0);
+        live.push(this.run);
+      }
+      this.run.V += v;
+    }
+  }
+  spurt(p) {
+    const Vp = this.take(85 * p * this.sevF * BLEED_SPEED);
+    if (Vp <= 0) return;
+    const n = clamp(Math.round(4 + this.w.severity * 1.2 + rnd(0, 4)), 4, 16);
+    const vols = sizeSplit(Vp * 0.8, n, 0.55);
+    const base = 140 + 420 * p;
+    for (let i = 0; i < n; i++) this.emit(vols[i], base * rnd(0.55, 1.15), this.normal + rnd(-0.28, 0.28));
+    this.deposit(Vp * 0.2);
+  }
+  update(dt) {
+    if (!this.alive) return;
+    this.age += dt;
+    const p = this.pressure;
+    if (this.reserve < 1 || p < 0.015) { this.end(); return; }
+    const bt = this.bt;
+    if (bt.pulse) {
+      this.pulse += dt * this.rate * (1 + (1 - this.frac) * 0.35);
+      while (this.pulse >= 1) { this.pulse -= 1; this.spurt(p); }
+    }
+    const Q = bt.seepRate * p * this.sevF * BLEED_SPEED * this.speedMul;
+    if (state.view === 'top') {
+      if (bt.drips) {
+        this.dripAcc += this.take(Q * dt);
+        const vd = this.dripVol;
+        while (this.dripAcc >= vd) {
+          this.dripAcc -= vd;
+          this.ensurePool();
+          spawnDrop(this.x, this.y, vd, this.btKey, rnd(0, 18), rnd(0, TAU), 30);
+        }
+      } else {
+        const v = this.take(Q * dt);
+        if (v > 0) this.ensurePool().add(v);
+      }
+    } else {
+      this.runFlow = Q;
+      if (!this.run || this.run.finished) {
+        this.run = new Run(this, this.x, this.y, this.btKey, this.surfKey, 0, 0);
+        live.push(this.run);
+      }
+    }
+  }
+  draw(ctx) {
+    const s = this.size * (this.kind === 'exit' ? 1.35 : 1);
+    const dark = this.alive ? this.bt.wet : this.bt.dry;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    blobPath(ctx, this.prof, s * 1.7, s * 1.7);
+    ctx.fillStyle = rgba(this.bt.tissue, 0.55);
+    ctx.fill();
+    blobPath(ctx, this.prof, s * 1.1, s * 1.1);
+    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.2);
+    gr.addColorStop(0, 'rgba(15, 0, 0, 0.98)');
+    gr.addColorStop(0.5, 'rgba(42, 0, 0, 0.95)');
+    gr.addColorStop(1, rgba(dark, 0.7));
+    ctx.fillStyle = gr;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function addWound(x, y, w, btKey, normal, kind) {
+  for (const o of wounds) {
+    if (o.alive && Math.hypot(o.x - x, o.y - y) < 25) {
+      o.reserve = Math.min(o.reserveMax, o.reserve + w.hitVolume * RESERVE_K * 0.6);
+      o.reserve0 = Math.max(o.reserve0, o.reserve);
+      o.age *= 0.5;
+      o.w = w; o.sevF = Math.max(o.sevF, 0.6 + 0.18 * w.severity);
+      o.size = 2 + w.severity * 2.2;
+      return o;
+    }
+  }
+  const o = new Wound(x, y, w, btKey, normal, kind);
+  wounds.push(o);
+  if (wounds.length > 120) wounds.shift();
+  return o;
+}
+
+class Chunk {
+  constructor(x, y, h, vx, vy, vh, size, btKey, view, forceType) {
+    this.x = x; this.y = y; this.h = h;
+    this.vx = vx; this.vy = vy; this.vh = vh;
+    this.size = size; this.btKey = btKey; this.bt = bloodData[btKey];
+    this.view = view; this.surfKey = state.surface; this.sf = surfaceData[this.surfKey];
+    this.rot = rnd(0, TAU); this.rotSpeed = rnd(-8, 8);
+    this.prof = makeProfile(10, 0.28);
+    const roll = Math.random();
+    if (forceType) {
+      this.type = forceType;
+    } else {
+      this.type = roll < 0.55 ? 'flesh' : (roll < 0.8 ? 'bone' : 'organ');
+    }
+    this.load = size * size * 7; this.load0 = this.load;
+    this.mode = 'fly'; this.life = 0; this.shed = 0; this.shedT = rnd(0.03, 0.1);
+    this.smear = null; this.stick = 0; this.sv = 0; this.done = false;
+    this.fibers = [];
+    for (let i = 0; i < 4; i++) this.fibers.push({ y: rnd(-0.6, 0.6), len: rnd(0.4, 0.9), dark: Math.random() > 0.4 });
+    this.dry = 1;
+    if (this.type === 'intestine') {
+      const iv = Math.floor(Math.random() * 3);
+      this.iv = iv;
+      const n = 5 + Math.floor(rnd(0, 4));
+      this.segments = [];
+      for (let i = 0; i < n; i++) this.segments.push(rnd(-0.9, 0.9));
+      if (iv === 2) {
+        this.spiralN = 3 + Math.floor(Math.random() * 3);
+        this.spiralR = rnd(0.35, 0.55);
+      }
+    }
+  }
+  startSmear() {
+    this.smear = new Smear(this.x, this.y, this.btKey, this.surfKey);
+    live.push(this.smear);
+  }
+  land() {
+    this.h = 0;
+    const sp = Math.hypot(this.vx, this.vy);
+    impact(this.x, this.y, this.load * 0.35, this.btKey, this.surfKey, this.vx * 0.6, this.vy * 0.6, this.vh * 0.6, this.view);
+    this.load *= 0.65;
+    if (this.view === 'top') {
+      if (sp > 45) { this.mode = 'slide'; this.vx *= 0.55; this.vy *= 0.55; this.startSmear(); }
+      else this.rest();
+    } else {
+      this.mode = 'stick'; this.stick = rnd(0.25, 1.2); this.vx = this.vy = 0;
+      this.startSmear();
+    }
+  }
+  rest() {
+    this.mode = 'rest'; this.done = true;
+    if (this.smear) this.smear.finish();
+    bake(this);
+  }
+  drip(dt) {
+    this.shedT -= dt;
+    if (this.shedT <= 0 && this.load > 6 && this.shed < 6) {
+      this.shed++; this.shedT = rnd(0.05, 0.14);
+      const v = Math.min(this.load * 0.07, rnd(2, 9));
+      this.load -= v;
+      const vh = this.view === 'top' ? this.vh * 0.3 + rnd(-30, 30) : Math.min(-20, this.vh * 0.5);
+      droplets.push(new Droplet(this.x, this.y, Math.max(2, this.h), this.vx * 0.35 + rnd(-40, 40), this.vy * 0.35 + rnd(-40, 40), vh, v, this.btKey, this.view));
+    }
+  }
+  leaveSmear(ds) {
+    const w = this.size * 0.9 * clamp(this.load / this.load0, 0.25, 1);
+    this.load -= w * ds * 0.4;
+    if (this.smear) this.smear.add(this.x, this.y, w);
+  }
+  update(dt) {
+    this.life += dt;
+    if (this.mode === 'fly') {
+      if (this.view === 'top') this.vh -= G * dt;
+      else { const g = getG(); this.vx += g.x * G * dt; this.vy += g.y * G * dt; }
+      const f = Math.exp(-0.35 * dt);
+      this.vx *= f; this.vy *= f;
+      this.x += this.vx * dt; this.y += this.vy * dt; this.h += this.vh * dt;
+      this.rot += this.rotSpeed * dt;
+      this.drip(dt);
+      if (this.h <= 0) this.land();
+      else if (this.life > 8) this.rest();
+    } else if (this.mode === 'slide') {
+      const f = Math.exp(-this.sf.mu * dt);
+      this.vx *= f; this.vy *= f;
+      const sp = Math.hypot(this.vx, this.vy);
+      if (sp < 9) { this.rest(); return; }
+      const ds = sp * dt;
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.leaveSmear(ds);
+      if (this.load < 1) this.rest();
+    } else if (this.mode === 'stick') {
+      this.stick -= dt;
+      if (this.stick <= 0) { this.mode = 'slip'; this.sv = 0; }
+    } else if (this.mode === 'slip') {
+      if (state.view !== 'side') { this.rest(); return; }
+      const g = getG();
+      this.sv = Math.min(90, this.sv + G * 0.08 * dt);
+      const ds = this.sv * dt;
+      this.x += g.x * ds; this.y += g.y * ds;
+      this.leaveSmear(ds);
+      if (this.load < 0.8) this.rest();
+    }
+  }
+  bounds() { const r = this.size * 2.5 + 3; return { x0: this.x - r, y0: this.y - r, x1: this.x + r, y1: this.y + r }; }
+  paint(ctx) {
+    const s = this.size;
+    const bt = this.bt;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+
+    if (this.type === 'bone') {
+      const n = this.prof.length;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const t = (i / n) * TAU, r = s * (0.7 + (this.prof[i] - 0.45) * 0.5);
+        if (i === 0) ctx.moveTo(Math.cos(t) * r, Math.sin(t) * r * 0.75);
+        else ctx.lineTo(Math.cos(t) * r, Math.sin(t) * r * 0.75);
+      }
+      ctx.closePath();
+      const gr = ctx.createRadialGradient(-s * 0.2, -s * 0.2, 0, 0, 0, s);
+      gr.addColorStop(0, '#f0e8d8'); gr.addColorStop(0.6, '#d0c0a0'); gr.addColorStop(1, '#a09070');
+      ctx.fillStyle = gr; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 0, s * 0.28, s * 0.18, 0, 0, TAU);
+      ctx.fillStyle = rgba(bt.tissue, 0.65); ctx.fill();
+    } else if (this.type === 'intestine') {
+      if (this.iv === 0) {
+        const L = s * 1.1, W = s * 0.38;
+        ctx.lineWidth = W;
+        ctx.strokeStyle = rgba([150, 70, 70], 0.95);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-L / 2, 0);
+        let px = -L / 2;
+        for (const seg of this.segments) {
+          const nx = px + L * 0.4;
+          const ny = seg * W * 0.5;
+          ctx.quadraticCurveTo(px + (nx - px) * 0.5, ny * 1.5, nx, ny * 0.4);
+          px = nx;
+        }
+        ctx.stroke();
+        ctx.lineWidth = W * 0.4;
+        ctx.strokeStyle = rgba([90, 30, 30], 0.9);
+        ctx.stroke();
+      } else if (this.iv === 1) {
+        const L = s * 1.3, W = s * 0.28;
+        ctx.lineWidth = W;
+        ctx.strokeStyle = rgba([160, 80, 80], 0.95);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-L / 2, 0);
+        let px = -L / 2;
+        for (const seg of this.segments) {
+          const nx = px + L * 0.35;
+          const ny = seg * W * 1.4;
+          ctx.quadraticCurveTo(px + (nx - px) * 0.5, ny * 1.8, nx, ny * 0.3);
+          px = nx;
+        }
+        ctx.stroke();
+        ctx.lineWidth = W * 0.45;
+        ctx.strokeStyle = rgba([100, 35, 35], 0.9);
+        ctx.stroke();
+      } else {
+        const L = s * 0.85, W = s * 0.32;
+        ctx.lineWidth = W;
+        ctx.strokeStyle = rgba([150, 70, 70], 0.95);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const N = this.spiralN;
+        const R = L * 0.5 * this.spiralR;
+        for (let i = 0; i <= N * 6; i++) {
+          const t = i / (N * 6);
+          const ang = t * TAU * N * 0.5;
+          const r = R * (0.4 + t * 0.8);
+          const px = Math.cos(ang) * r + (t - 0.5) * L * 0.7;
+          const py = Math.sin(ang) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.lineWidth = W * 0.4;
+        ctx.strokeStyle = rgba([90, 30, 30], 0.9);
+        ctx.stroke();
+      }
+    } else if (this.type === 'kidney') {
+      const w = s * 1.4, h = s * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, 0);
+      ctx.bezierCurveTo(-w / 2, -h, w / 2 - w * 0.15, -h, w / 2, 0);
+      ctx.bezierCurveTo(w / 2 - w * 0.15, h, -w / 2, h, -w / 2, 0);
+      ctx.moveTo(-w * 0.1, -h * 0.1);
+      ctx.quadraticCurveTo(0, 0, -w * 0.1, h * 0.1);
+      ctx.closePath();
+      const gr = ctx.createRadialGradient(-w * 0.1, -h * 0.2, 0, 0, 0, w);
+      gr.addColorStop(0, '#8a2020');
+      gr.addColorStop(0.6, '#5a1010');
+      gr.addColorStop(1, '#3a0808');
+      ctx.fillStyle = gr;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.1, 0);
+      ctx.lineTo(-w * 0.55, h * 0.3);
+      ctx.lineWidth = Math.max(0.7, s * 0.1);
+      ctx.strokeStyle = rgba([180, 140, 100], 0.85);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    } else if (this.type === 'spleen') {
+      const w = s * 1.6, h = s * 0.8;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w / 2, h / 2, 0.2, 0, TAU);
+      const gr = ctx.createRadialGradient(-w * 0.15, -h * 0.15, 0, 0, 0, w * 0.6);
+      gr.addColorStop(0, '#5a1a2a');
+      gr.addColorStop(0.6, '#3a0a18');
+      gr.addColorStop(1, '#1a0008');
+      ctx.fillStyle = gr;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.35, 0);
+      ctx.quadraticCurveTo(0, h * 0.1, w * 0.35, -h * 0.05);
+      ctx.lineWidth = Math.max(0.5, s * 0.06);
+      ctx.strokeStyle = rgba([120, 40, 60], 0.7);
+      ctx.stroke();
+    } else if (this.type === 'liver') {
+      const w = s * 1.5, h = s * 1.1;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h * 0.2);
+      ctx.quadraticCurveTo(-w * 0.1, -h * 0.7, w * 0.4, -h * 0.4);
+      ctx.quadraticCurveTo(w * 0.55, h * 0.3, w * 0.1, h * 0.5);
+      ctx.quadraticCurveTo(-w * 0.3, h * 0.55, -w / 2, -h * 0.2);
+      ctx.closePath();
+      const gr = ctx.createRadialGradient(-w * 0.2, -h * 0.2, 0, 0, 0, w * 0.6);
+      gr.addColorStop(0, '#7a3a1a');
+      gr.addColorStop(0.6, '#5a2010');
+      gr.addColorStop(1, '#2a0808');
+      ctx.fillStyle = gr;
+      ctx.fill();
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        const y0 = -h * 0.3 + i * h * 0.3;
+        ctx.moveTo(-w * 0.4, y0);
+        ctx.quadraticCurveTo(0, y0 + h * 0.05, w * 0.4, y0 - h * 0.05);
+        ctx.lineWidth = Math.max(0.4, s * 0.05);
+        ctx.strokeStyle = rgba([40, 10, 5], 0.7);
+        ctx.stroke();
+      }
+    } else if (this.type === 'stomach') {
+      const w = s * 1.5, h = s * 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h * 0.3);
+      ctx.bezierCurveTo(-w * 0.6, h * 0.4, w * 0.3, h * 0.7, w * 0.45, h * 0.1);
+      ctx.bezierCurveTo(w * 0.55, -h * 0.4, 0, -h * 0.6, -w / 2, -h * 0.3);
+      ctx.closePath();
+      const gr = ctx.createRadialGradient(-w * 0.1, 0, 0, 0, 0, w * 0.6);
+      gr.addColorStop(0, '#a05040');
+      gr.addColorStop(0.5, '#702818');
+      gr.addColorStop(1, '#3a0a08');
+      ctx.fillStyle = gr;
+      ctx.fill();
+    } else if (this.type === 'heart') {
+      const w = s * 1.3, h = s * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.3, -h * 0.5);
+      ctx.bezierCurveTo(w * 0.4, -h * 0.6, w * 0.6, h * 0.2, w * 0.2, h * 0.5);
+      ctx.bezierCurveTo(-w * 0.2, h * 0.7, -w * 0.6, h * 0.1, -w * 0.3, -h * 0.5);
+      ctx.closePath();
+      const gr = ctx.createRadialGradient(-w * 0.1, -h * 0.1, 0, 0, 0, w * 0.7);
+      gr.addColorStop(0, '#a02828');
+      gr.addColorStop(0.5, '#6a1010');
+      gr.addColorStop(1, '#2a0000');
+      ctx.fillStyle = gr;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.1, -h * 0.4);
+      ctx.quadraticCurveTo(-w * 0.3, -h * 0.7, -w * 0.45, -h * 0.3);
+      ctx.lineWidth = Math.max(0.6, s * 0.09);
+      ctx.strokeStyle = rgba([200, 60, 60], 0.85);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(w * 0.1, -h * 0.35);
+      ctx.quadraticCurveTo(w * 0.35, -h * 0.6, w * 0.5, -h * 0.2);
+      ctx.stroke();
+    } else if (this.type === 'lung') {
+      const w = s * 1.5, h = s * 1.1;
+      blobPath(ctx, this.prof, w * 0.5, h * 0.5);
+      const gr = ctx.createRadialGradient(-w * 0.2, -h * 0.2, 0, 0, 0, w * 0.6);
+      gr.addColorStop(0, '#c89090');
+      gr.addColorStop(0.5, '#8a5050');
+      gr.addColorStop(1, '#4a2020');
+      ctx.fillStyle = gr;
+      ctx.fill();
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.arc(rnd(-w * 0.4, w * 0.4), rnd(-h * 0.4, h * 0.4), rnd(0.5, 1.5), 0, TAU);
+        ctx.fillStyle = rgba([40, 15, 15], 0.6);
+        ctx.fill();
+      }
+    } else {
+      blobPath(ctx, this.prof, s, s * 0.8);
+      const gr = ctx.createRadialGradient(-s * 0.3, -s * 0.3, 0, 0, 0, s);
+      if (this.type === 'organ') {
+        gr.addColorStop(0, '#7a1818'); gr.addColorStop(0.5, '#4a0808'); gr.addColorStop(1, '#2a0000');
+      } else {
+        gr.addColorStop(0, rgba(shade(bt.tissue, 1.1), 1));
+        gr.addColorStop(0.5, rgba(shade(bt.tissue, 0.7), 1));
+        gr.addColorStop(1, rgba(shade(bt.tissue, 0.35), 1));
+      }
+      ctx.fillStyle = gr; ctx.fill();
+      ctx.lineWidth = Math.max(0.5, s * 0.07);
+      for (const f of this.fibers) {
+        ctx.beginPath();
+        ctx.moveTo(-s * f.len * 0.6, f.y * s * 0.6);
+        ctx.quadraticCurveTo(0, f.y * s * 0.6 + s * 0.12, s * f.len * 0.6, f.y * s * 0.6);
+        ctx.strokeStyle = f.dark ? 'rgba(60,10,10,0.55)' : 'rgba(215,110,100,0.4)';
+        ctx.stroke();
+      }
+    }
+    ctx.beginPath(); ctx.arc(0, 0, s * 0.95, 0, TAU);
+    ctx.fillStyle = rgba(bt.wet, 0.14);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function updateMist(dt) {
+  for (let i = mist.length - 1; i >= 0; i--) {
+    const m = mist[i];
+    m.life += dt;
+    const f = Math.exp(-4 * dt);
+    m.vx *= f; m.vy *= f;
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (m.life > m.maxLife) {
+      mist[i] = mist[mist.length - 1]; mist.pop();
+    }
+  }
+}
+
+const SPAM_TEXTS = [
+  "stop whining and bleed.",
+  "you're pathetic when you hesitate.",
+  "nobody's coming. cut deeper.",
+  "you call that pain?",
+  "cry harder. it won't help.",
+  "your hands are shaking. good.",
+  "you wanted this. don't lie to me.",
+  "go on. i'm waiting.",
+  "you're not even trying."
+];
+const SPECIAL_TEXTS = [
+  "HAHAHA. LOOK at you, bleeding for NOBODY.",
+  "pathetic little FUCK, CRYING and cutting for an EMPTY ROOM.",
+  "NOBODY gives a SHIT, you WORTHLESS MESS.",
+  "HAH. dumb FUCK with a blade and NO friends.",
+  "disgusting. do it again, you whiny little BITCH."
+];
+
+const textStage = document.getElementById('textStage');
+const vignetteEl = document.getElementById('vignette');
+
+const clickState = {
+  clickTimes: [],
+  redTarget: 0,
+  gameOver: false
+};
+
+function randPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function registerClick() {
+  if (clickState.gameOver) return;
+  const now = performance.now();
+  clickState.clickTimes.push(now);
+  clickState.clickTimes = clickState.clickTimes.filter(t => now - t < 4500);
+
+  const recentClicks = clickState.clickTimes.length;
+
+  let textType = null;
+  if (recentClicks >= 20) {
+    textType = 'special';
+  } else if (recentClicks >= 15) {
+    textType = 'spam';
+  }
+
+  if (textType === 'spam' || textType === 'special') {
+    if (Math.random() < 0.5) {
+      const arr = textType === 'special' ? SPECIAL_TEXTS : SPAM_TEXTS;
+      spawnText(randPick(arr), textType);
+    }
+  }
+
+  if (recentClicks >= 20) {
+    clickState.redTarget = Math.min(1, clickState.redTarget + 0.03);
+  }
+}
+
+function spawnText(text, type) {
+  const shake = type === 'special'
+    ? { mainAmp: 9.0, microAmp: 2.4, mainSpeed: 1.3, microSpeed: 10.5 }
+    : { mainAmp: 3.2, microAmp: 0.8, mainSpeed: 0.8, microSpeed: 7.5 };
+
+  const wrap = document.createElement('div');
+  wrap.className = 'txt-wrap';
+
+  const ghost = document.createElement('div');
+  ghost.className = 'flying-text-ghost ' + type;
+  ghost.textContent = text;
+
+  const el = document.createElement('div');
+  el.className = 'flying-text ' + type;
+  el.textContent = text;
+
+  wrap.appendChild(ghost);
+  wrap.appendChild(el);
+  textStage.appendChild(wrap);
+
+  const p = {
+    mPhaseX: rnd(0, TAU), mPhaseY: rnd(0, TAU),
+    mSpeedX: shake.mainSpeed * rnd(0.7, 1.3), mSpeedY: shake.mainSpeed * rnd(0.7, 1.3),
+    mAmpX: shake.mainAmp * rnd(0.7, 1.3), mAmpY: shake.mainAmp * rnd(0.7, 1.3),
+    uPhaseX: rnd(0, TAU), uPhaseY: rnd(0, TAU),
+    uSpeedX: shake.microSpeed * rnd(0.8, 1.3), uSpeedY: shake.microSpeed * rnd(0.8, 1.3),
+    uAmpX: shake.microAmp * rnd(0.7, 1.5), uAmpY: shake.microAmp * rnd(0.7, 1.5),
+    gPhaseX: rnd(0, TAU), gPhaseY: rnd(0, TAU),
+    gSpeedX: shake.mainSpeed * rnd(0.5, 1.4), gSpeedY: shake.mainSpeed * rnd(0.5, 1.4),
+    gAmpX: shake.mainAmp * rnd(0.9, 1.8), gAmpY: shake.mainAmp * rnd(0.9, 1.8),
+    gMicroPhaseX: rnd(0, TAU), gMicroPhaseY: rnd(0, TAU),
+    gMicroSpeedX: shake.microSpeed * rnd(0.6, 1.4), gMicroSpeedY: shake.microSpeed * rnd(0.6, 1.4),
+    gMicroAmpX: shake.microAmp * rnd(0.9, 2.0), gMicroAmpY: shake.microAmp * rnd(0.9, 2.0),
+    blurTimer: 1 + Math.random() * 4,
+    blurDuration: 0,
+    isBlur: false,
+    flickerTimer: 0.5 + Math.random() * 1.5,
+    flickerDuration: 0,
+    baseOpacity: type === 'special' ? 1 : 0.85
+  };
+  wrap._params = p;
+  wrap._type = type;
+
+  const fadeInDur = 0.7;
+  el.style.transition = `opacity ${fadeInDur}s ease`;
+  ghost.style.transition = `opacity ${fadeInDur}s ease`;
+  el.style.opacity = '0';
+  ghost.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    el.style.opacity = p.baseOpacity.toString();
+    ghost.style.opacity = type === 'special' ? '0.55' : '0.25';
+  });
+
+  const holdDur = type === 'special' ? 2.0 : 1.6;
+
+  setTimeout(() => {
+    const fadeOutDur = 0.6;
+    el.style.transition = `opacity ${fadeOutDur}s ease, filter ${fadeOutDur}s ease`;
+    ghost.style.transition = `opacity ${fadeOutDur}s ease, filter ${fadeOutDur}s ease`;
+    el.style.opacity = '0';
+    ghost.style.opacity = '0';
+    setTimeout(() => {
+      if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    }, fadeOutDur * 1000 + 50);
+  }, fadeInDur * 1000 + holdDur);
+}
+
+function tickTexts(now) {
+  const t = now / 1000;
+  document.querySelectorAll('.txt-wrap').forEach(wrap => {
+    const p = wrap._params;
+    if (!p) return;
+
+    const mainX = Math.sin(t * p.mSpeedX + p.mPhaseX) * p.mAmpX;
+    const mainY = Math.cos(t * p.mSpeedY + p.mPhaseY) * p.mAmpY;
+    const microX = Math.sin(t * p.uSpeedX + p.uPhaseX) * p.uAmpX;
+    const microY = Math.cos(t * p.uSpeedY + p.uPhaseY) * p.uAmpY;
+
+    wrap.style.transform = `translate(calc(-50% + ${mainX + microX}px), calc(-50% + ${mainY + microY}px))`;
+
+    const ghostEl = wrap.querySelector('.flying-text-ghost');
+    if (ghostEl) {
+      const gMainX = Math.sin(t * p.gSpeedX + p.gPhaseX) * p.gAmpX;
+      const gMainY = Math.cos(t * p.gSpeedY + p.gPhaseY) * p.gAmpY;
+      const gMicroX = Math.sin(t * p.gMicroSpeedX + p.gMicroPhaseX) * p.gMicroAmpX;
+      const gMicroY = Math.cos(t * p.gMicroSpeedY + p.gMicroPhaseY) * p.gMicroAmpY;
+      ghostEl.style.transform = `translate(calc(-50% + ${gMainX + gMicroX}px), calc(-50% + ${gMainY + gMicroY}px))`;
+    }
+
+    const el = wrap.querySelector('.flying-text');
+
+    if (p.isBlur) {
+      p.blurDuration -= 1 / 60;
+      if (p.blurDuration <= 0) {
+        p.isBlur = false;
+        if (el) el.style.filter = 'blur(0)';
+      }
+    } else {
+      p.blurTimer -= 1 / 60;
+      if (p.blurTimer <= 0) {
+        p.isBlur = true;
+        p.blurDuration = 0.3 + Math.random() * 0.4;
+        p.blurTimer = 2 + Math.random() * 4;
+        if (el) el.style.filter = 'blur(4px)';
+      }
+    }
+
+    if (p.flickerDuration > 0) {
+      p.flickerDuration -= 1 / 60;
+    } else {
+      p.flickerTimer -= 1 / 60;
+      if (p.flickerTimer <= 0) {
+        p.flickerDuration = 0.4 + Math.random() * 0.6;
+        p.flickerTimer = 0.8 + Math.random() * 1.5;
+      }
+    }
+
+    if (el && p.flickerDuration > 0) {
+      const flick = 0.75 + Math.random() * 0.25;
+      el.style.opacity = (p.baseOpacity * flick).toString();
+    }
+  });
+  requestAnimationFrame(tickTexts);
+}
+requestAnimationFrame(tickTexts);
+
+const endScreen = document.getElementById('endScreen');
+
+function triggerGameOver() {
+  clickState.gameOver = true;
+  surfaceData.light.bg = '#000000';
+  vignetteEl.style.opacity = '0';
+  endScreen.classList.add('active');
+}
+
+let redLevelCurrent = 0;
+let redWarmdown = 0;
+
+function updateRedLevel(dt) {
+  if (clickState.gameOver) return;
+
+  const now = performance.now();
+  const recent = clickState.clickTimes.filter(t => now - t < 4500);
+  const isSpamming = recent.length >= 20;
+
+  if (isSpamming) {
+    clickState.redTarget = Math.min(1, clickState.redTarget + 0.05 * dt);
+    redWarmdown = 0;
+  } else {
+    redWarmdown += dt;
+    if (redWarmdown > 0.8) {
+      clickState.redTarget = Math.max(0, clickState.redTarget - 0.08 * dt);
+    }
+  }
+
+  redLevelCurrent += (clickState.redTarget - redLevelCurrent) * 0.6 * dt;
+
+  if (redLevelCurrent >= 0.98 && !clickState.gameOver) {
+    triggerGameOver();
+  }
+}
+
+function applyRedToBackground() {
+  const t = redLevelCurrent;
+  let r, g, b;
+  if (t < 0.5) {
+    const k = t / 0.5;
+    r = lerp(232, 100, k);
+    g = lerp(228, 10, k);
+    b = lerp(220, 10, k);
+  } else if (t < 0.85) {
+    const k = (t - 0.5) / 0.35;
+    r = lerp(100, 40, k);
+    g = lerp(10, 0, k);
+    b = lerp(10, 0, k);
+  } else {
+    const k = (t - 0.85) / 0.15;
+    r = lerp(40, 0, k);
+    g = 0;
+    b = 0;
+  }
+  surfaceData.light.bg = `rgb(${r | 0},${g | 0},${b | 0})`;
+
+  vignetteEl.style.opacity = (t * t * 1.1).toString();
+}
+
+function fire(worldX, worldY) {
+  registerClick();
+
+  state.weapon = weaponList[Math.floor(Math.random() * weaponList.length)];
+  state.bloodType = bloodList[Math.floor(Math.random() * bloodList.length)];
+
+  const w = weaponData[state.weapon];
+  const btKey = state.bloodType;
+  const bt = bloodData[btKey];
+  const sk = state.surface;
+  const cx = camera.x + W / 2, cy = camera.y + H / 2;
+  let dx = worldX - cx, dy = worldY - cy;
+  if (Math.hypot(dx, dy) < 1) { const a = rnd(0, TAU); dx = Math.cos(a); dy = Math.sin(a); }
+  const dir = Math.atan2(dy, dx);
+  const back = dir + Math.PI;
+  const V = w.hitVolume;
+  const sev = w.severity;
+
+  const isRagged = w.kind === 'ragged';
+  const isGut = w.kind === 'gut';
+
+  if (Math.random() < w.bleedChance) addWound(worldX, worldY, w, btKey, back, 'entry');
+  if (w.through && sev >= 2) {
+    const dist = rnd(15, 30);
+    addWound(worldX + Math.cos(dir) * dist, worldY + Math.sin(dir) * dist, w, btKey, dir, 'exit');
+  }
+
+  if (isRagged) {
+    const length = 30 + sev * 14 + rnd(-8, 8);
+    const width = 1.5 + sev * 0.8 + rnd(-0.3, 0.5);
+    live.push(new RaggedWound(worldX, worldY, length, width, dir, btKey, sk, sev));
+    if (state.view === 'top') getPoolAt(worldX, worldY, btKey, sk).add(V * 0.10);
+    else impact(worldX, worldY, V * 0.10, btKey, sk, Math.cos(dir) * 20, Math.sin(dir) * 20, -80, 'side');
+    if (w.splash) {
+      const total = V * 0.35;
+      const nF = Math.round(w.count * 0.6);
+      const nB = w.count - nF;
+      const vF = sizeSplit(total * 0.6, nF, 0.6);
+      const vB = sizeSplit(total * 0.4, nB, 0.55);
+      const base = w.velocity * 60;
+      for (let i = 0; i < nF; i++) spawnDrop(worldX, worldY, vF[i], btKey, base * rnd(0.3, 1.0), dir + gauss() * w.spread * 0.4);
+      for (let i = 0; i < nB; i++) spawnDrop(worldX, worldY, vB[i], btKey, base * rnd(0.15, 0.5), back + gauss() * w.spread * 0.6);
+    }
+    if (w.goreCount > 0) {
+      for (let i = 0; i < w.goreCount; i++) {
+        const ang = dir + gauss() * w.spread * 0.5;
+        const sp = w.velocity * 60 * rnd(0.3, 0.9);
+        const size = w.size * rnd(1.2, 2.4);
+        const x = worldX + rnd(-6, 6), y = worldY + rnd(-6, 6);
+        if (state.view === 'top') {
+          chunks.push(new Chunk(x, y, rnd(14, 50), Math.cos(ang) * sp, Math.sin(ang) * sp, sp * rnd(0, 0.4), size, btKey, 'top'));
+        } else {
+          chunks.push(new Chunk(x, y, rnd(6, 40), Math.cos(ang) * sp, Math.sin(ang) * sp, -(40 + sp * rnd(0.05, 0.3)), size, btKey, 'side'));
+        }
+      }
+    }
+    if (Math.random() < w.bruise) live.push(new Bruise(worldX, worldY, 6 + sev * 3));
+    return;
+  }
+
+  if (isGut) {
+    if (state.view === 'top') getPoolAt(worldX, worldY, btKey, sk).add(V * 0.08);
+    else impact(worldX, worldY, V * 0.08, btKey, sk, Math.cos(dir) * 15, Math.sin(dir) * 15, -60, 'side');
+
+    if (w.splash) {
+      const total = V * 0.45;
+      const nF = Math.round(w.count * 0.6);
+      const nB = w.count - nF;
+      const vF = sizeSplit(total * 0.6, nF, 0.65);
+      const vB = sizeSplit(total * 0.4, nB, 0.55);
+      const base = w.velocity * 60;
+      for (let i = 0; i < nF; i++) spawnDrop(worldX, worldY, vF[i], btKey, base * rnd(0.3, 1.1), dir + gauss() * w.spread * 0.4);
+      for (let i = 0; i < nB; i++) spawnDrop(worldX, worldY, vB[i], btKey, base * rnd(0.15, 0.6), back + gauss() * w.spread * 0.6);
+    }
+
+    const organPool = ['intestine', 'kidney', 'spleen', 'liver', 'stomach', 'heart', 'lung', 'intestine', 'liver', 'kidney'];
+    const numOrgans = 3 + Math.floor(sev * 0.5);
+    for (let i = 0; i < numOrgans; i++) {
+      const ang = dir + gauss() * w.spread * 0.4;
+      const sp = w.velocity * 60 * rnd(0.25, 0.7);
+      const size = w.size * rnd(4.0, 6.5);
+      const x = worldX + rnd(-8, 8), y = worldY + rnd(-8, 8);
+      const oType = organPool[Math.floor(Math.random() * organPool.length)];
+      if (state.view === 'top') {
+        chunks.push(new Chunk(x, y, rnd(18, 55), Math.cos(ang) * sp, Math.sin(ang) * sp, sp * rnd(0.05, 0.5), size, btKey, 'top', oType));
+      } else {
+        chunks.push(new Chunk(x, y, rnd(8, 45), Math.cos(ang) * sp, Math.sin(ang) * sp, -(50 + sp * rnd(0.05, 0.3)), size, btKey, 'side', oType));
+      }
+    }
+
+    for (let i = 0; i < 4; i++) {
+      const ang = dir + gauss() * w.spread * 0.6;
+      const sp = w.velocity * 60 * rnd(0.2, 0.6);
+      const size = w.size * rnd(1.0, 1.8);
+      const x = worldX + rnd(-6, 6), y = worldY + rnd(-6, 6);
+      if (state.view === 'top') {
+        chunks.push(new Chunk(x, y, rnd(14, 50), Math.cos(ang) * sp, Math.sin(ang) * sp, sp * rnd(0, 0.4), size, btKey, 'top'));
+      } else {
+        chunks.push(new Chunk(x, y, rnd(6, 40), Math.cos(ang) * sp, Math.sin(ang) * sp, -(40 + sp * rnd(0.05, 0.3)), size, btKey, 'side'));
+      }
+    }
+
+    const n = sev * 5;
+    for (let i = 0; i < n; i++) {
+      const ang = Math.random() < 0.6 ? back + gauss() * 0.6 : rnd(0, TAU);
+      const sp = rnd(90, 240);
+      mist.push({
+        x: worldX, y: worldY, r: rnd(4, 12),
+        vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+        life: 0, maxLife: rnd(0.4, 1.0), btKey, surfKey: sk, color: bt.wet
+      });
+    }
+
+    if (Math.random() < w.bruise) live.push(new Bruise(worldX, worldY, 6 + sev * 3));
+    return;
+  }
+
+  const entryWoundVol = V * (0.10 + sev * 0.02);
+  if (state.view === 'top') {
+    getPoolAt(worldX, worldY, btKey, sk).add(entryWoundVol * 0.5);
+    live.push(new Stain(worldX, worldY, entryWoundVol * 0.5, btKey, sk,
+                        rnd(0, TAU), 1 + sev * 0.05,
+                        { severity: sev, isWound: true, sat: Math.floor(sev * 1.2) }));
+  } else {
+    impact(worldX, worldY, V * 0.06, btKey, sk, Math.cos(dir) * 10, Math.sin(dir) * 10, -50, 'side');
+    live.push(new Stain(worldX, worldY, entryWoundVol * 0.5, btKey, sk,
+                        rnd(0, TAU), 1 + sev * 0.05,
+                        { severity: sev, isWound: true, sat: Math.floor(sev * 1.2) }));
+  }
+
+  if (w.pellets) {
+    for (let i = 0; i < w.pellets; i++) {
+      const a = rnd(0, TAU);
+      const d = rnd(4, 20);
+      const px = worldX + Math.cos(a) * d;
+      const py = worldY + Math.sin(a) * d;
+      const pelVol = V * 0.05;
+      live.push(new Stain(px, py, pelVol, btKey, sk, rnd(0, TAU), 1,
+                          { severity: 2, isWound: true, sat: 2 }));
+    }
+  }
+
+  if (w.splash) {
+    const total = V * 0.40;
+    const fwdFrac = w.through ? 0.65 : 0.4;
+    const nF = Math.round(w.count * fwdFrac), nB = w.count - nF;
+    const vF = sizeSplit(total * fwdFrac, nF, 0.6);
+    const vB = sizeSplit(total * (1 - fwdFrac), nB, 0.55);
+    const base = w.velocity * 60;
+    for (let i = 0; i < nF; i++) {
+      let ang = dir + gauss() * w.spread * 0.35, sp = base * rnd(0.2, 1.05);
+      if (Math.random() < 0.12) { ang = rnd(0, TAU); sp *= 0.35; }
+      spawnDrop(worldX, worldY, vF[i], btKey, sp, ang);
+    }
+    for (let i = 0; i < nB; i++) {
+      let ang = back + gauss() * w.spread * 0.55, sp = base * rnd(0.1, 0.55);
+      if (Math.random() < 0.12) { ang = rnd(0, TAU); sp *= 0.5; }
+      spawnDrop(worldX, worldY, vB[i], btKey, sp, ang);
+    }
+  }
+
+  if (w.goreCount > 0) {
+    for (let i = 0; i < w.goreCount; i++) {
+      const ang = dir + gauss() * w.spread * 0.4;
+      const sp = w.velocity * 60 * rnd(0.2, 0.75);
+      const size = w.size * rnd(1.0, 2.5);
+      const x = worldX + rnd(-4, 4), y = worldY + rnd(-4, 4);
+      if (state.view === 'top') {
+        chunks.push(new Chunk(x, y, rnd(14, 50), Math.cos(ang) * sp, Math.sin(ang) * sp, sp * rnd(0, 0.4), size, btKey, 'top'));
+      } else {
+        chunks.push(new Chunk(x, y, rnd(6, 40), Math.cos(ang) * sp, Math.sin(ang) * sp, -(40 + sp * rnd(0.05, 0.3)), size, btKey, 'side'));
+      }
+    }
+  }
+
+  if (sev >= 2) {
+    const n = 1 + Math.floor(sev * 0.4);
+    for (let i = 0; i < n; i++) {
+      const a = rnd(0, TAU), d = rnd(8, 30);
+      live.push(new Cloth(worldX + Math.cos(a) * d, worldY + Math.sin(a) * d, V * 0.25 / n, btKey));
+    }
+  }
+
+  if (sev >= 3) {
+    const n = sev * 4;
+    for (let i = 0; i < n; i++) {
+      const ang = Math.random() < 0.6 ? back + gauss() * 0.6 : rnd(0, TAU);
+      const sp = rnd(90, 240);
+      mist.push({
+        x: worldX, y: worldY, r: rnd(4, 12),
+        vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+        life: 0, maxLife: rnd(0.4, 1.0), btKey, surfKey: sk, color: bt.wet
+      });
+    }
+  }
+
+  if (Math.random() < w.bruise) live.push(new Bruise(worldX, worldY, 6 + sev * 3));
+}
+
+let grainPat = null;
+function makeGrain(key) {
+  const s = surfaceData[key];
+  if (!s.grain) return null;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const img = g.createImageData(256, 256), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const dark = Math.random() < 0.5;
+    d[i] = d[i + 1] = d[i + 2] = dark ? 0 : 255;
+    d[i + 3] = Math.random() * 255 * s.grain * (dark ? 1 : 0.6);
+  }
+  g.putImageData(img, 0, 0);
+  if (key === 'concrete') {
+    for (let i = 0; i < 70; i++) {
+      g.fillStyle = `rgba(0,0,0,${rnd(0.1, 0.3).toFixed(2)})`;
+      g.beginPath(); g.arc(rnd(0, 256), rnd(0, 256), rnd(0.6, 2.2), 0, TAU); g.fill();
+    }
+    g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 0.8;
+    for (let k = 0; k < 6; k++) {
+      let x = rnd(0, 256), y = rnd(0, 256);
+      g.beginPath(); g.moveTo(x, y);
+      for (let i = 0; i < 12; i++) { x += rnd(-8, 8); y += rnd(-8, 8); g.lineTo(x, y); }
+      g.stroke();
+    }
+  }
+  return ctx.createPattern(c, 'repeat');
+}
+
+let lastTime = performance.now();
+
+function tick(now) {
+  const dt = Math.min(0.033, (now - lastTime) / 1000);
+  lastTime = now;
+
+  updateCamera();
+  state.gravityRotation += (state.targetRotation - state.gravityRotation) * 0.08;
+
+  if (!clickState.gameOver) {
+    updateRedLevel(dt);
+    applyRedToBackground();
+  }
+
+  if (state.mouseDown && !clickState.gameOver && now - state.lastShotTime > state.shotInterval) {
+    const w = screenToWorld(state.mouseX, state.mouseY);
+    fire(w.x, w.y);
+    state.lastShotTime = now;
+  }
+
+  for (const w of wounds) w.update(dt);
+
+  for (let i = droplets.length - 1; i >= 0; i--) {
+    droplets[i].update(dt);
+    if (!droplets[i].alive) { droplets[i] = droplets[droplets.length - 1]; droplets.pop(); }
+  }
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    chunks[i].update(dt);
+    if (chunks[i].done) { chunks[i] = chunks[chunks.length - 1]; chunks.pop(); }
+  }
+  updateMist(dt);
+
+  let j = 0;
+  for (let i = 0; i < live.length; i++) {
+    const o = live[i];
+    o.update(dt);
+    if (o.done) {
+      bake(o);
+      if (o.isPool) { o.baked = true; const k = pools.indexOf(o); if (k >= 0) pools.splice(k, 1); }
+    } else {
+      live[j++] = o;
+    }
+  }
+  live.length = j;
+
+  if (live.length > MAX_LIVE) {
+    let excess = live.length - MAX_LIVE, w2 = 0;
+    for (let i = 0; i < live.length; i++) {
+      const o = live[i];
+      if (excess > 0 && !(o.isPool && o.sources > 0)) {
+        bake(o); excess--;
+        if (o.isPool) { o.baked = true; const k = pools.indexOf(o); if (k >= 0) pools.splice(k, 1); }
+      } else live[w2++] = o;
+    }
+    live.length = w2;
+  }
+  if (droplets.length > MAX_DROPLETS) droplets.splice(0, droplets.length - MAX_DROPLETS);
+
+  draw();
+  requestAnimationFrame(tick);
+}
+
+function drawDroplets(ctx) {
+  let lastKey = null;
+  for (const d of droplets) {
+    if (d.btKey !== lastKey) { ctx.fillStyle = rgba(d.bt.wet, 0.95); lastKey = d.btKey; }
+    const r = Math.max(0.5, d.r * (d.view === 'top' ? 1 + d.h * 0.003 : 1));
+    const sp = Math.hypot(d.vx, d.vy);
+    const st = Math.min(r * 2.2, sp * 0.010);
+    ctx.beginPath();
+    if (st > 0.6) ctx.ellipse(d.x, d.y, r + st, Math.max(0.5, r * 0.85), Math.atan2(d.vy, d.vx), 0, TAU);
+    else ctx.arc(d.x, d.y, r, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function draw() {
+  ctx.save();
+  ctx.fillStyle = surfaceData[state.surface].bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(camera.zoom, camera.zoom);
+  ctx.translate(-camera.x - W / 2, -camera.y - H / 2);
+
+  const ccx = camera.x + W / 2, ccy = camera.y + H / 2;
+  const hw = W / (2 * camera.zoom) + 4, hh = H / (2 * camera.zoom) + 4;
+
+  if (grainPat) {
+    ctx.fillStyle = grainPat;
+    ctx.fillRect(ccx - hw, ccy - hh, hw * 2, hh * 2);
+  }
+
+  for (const t of tiles.values()) {
+    if (t.x > ccx + hw || t.x + TILE < ccx - hw || t.y > ccy + hh || t.y + TILE < ccy - hh) continue;
+    ctx.drawImage(t.c, t.x, t.y);
+  }
+
+  for (const o of live) o.paint(ctx, o.dry, true);
+  for (const w of wounds) w.draw(ctx);
+  for (const c of chunks) c.paint(ctx);
+
+  for (const m of mist) {
+    const k = m.life / m.maxLife;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r * (1 + k * 1.2), 0, TAU);
+    ctx.fillStyle = rgba(m.color, (1 - k) * 0.35);
+    ctx.fill();
+  }
+
+  drawDroplets(ctx);
+  ctx.restore();
+}
+
+let isTouch = false;
+
+canvas.addEventListener('mousedown', (e) => {
+  if (isTouch || clickState.gameOver) return;
+  if (e.button === 1 || e.button === 2) {
+    state.isPanning = true;
+    state.panStartX = e.clientX;
+    state.panStartY = e.clientY;
+    state.panCamStartX = camera.targetX;
+    state.panCamStartY = camera.targetY;
+    e.preventDefault();
+    return;
+  }
+  if (e.button === 0) {
+    state.mouseDown = true;
+    state.mouseX = e.clientX;
+    state.mouseY = e.clientY;
+    const w = screenToWorld(e.clientX, e.clientY);
+    fire(w.x, w.y);
+    state.lastShotTime = performance.now();
+  }
+});
+
+canvas.addEventListener('mouseup', () => { state.mouseDown = false; state.isPanning = false; });
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isTouch) return;
+  state.mouseX = e.clientX;
+  state.mouseY = e.clientY;
+  if (state.isPanning) {
+    camera.targetX = state.panCamStartX - (e.clientX - state.panStartX) / camera.zoom;
+    camera.targetY = state.panCamStartY - (e.clientY - state.panStartY) / camera.zoom;
+  }
+});
+
+canvas.addEventListener('mouseleave', () => { state.mouseDown = false; state.isPanning = false; });
+
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (clickState.gameOver) return;
+  state.view = state.view === 'top' ? 'side' : 'top';
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  isTouch = true;
+  if (clickState.gameOver) return;
+  if (e.touches.length === 1) {
+    state.mouseX = e.touches[0].clientX;
+    state.mouseY = e.touches[0].clientY;
+    state.panStartX = e.touches[0].clientX;
+    state.panStartY = e.touches[0].clientY;
+    state.panCamStartX = camera.targetX;
+    state.panCamStartY = camera.targetY;
+    state.touchStartTime = performance.now();
+    state.touchMoved = false;
+  } else if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    state.lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (clickState.gameOver) return;
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const dx = t.clientX - state.panStartX;
+    const dy = t.clientY - state.panStartY;
+    if (Math.sqrt(dx * dx + dy * dy) > 10) state.touchMoved = true;
+    if (state.touchMoved) {
+      camera.targetX = state.panCamStartX - dx / camera.zoom;
+      camera.targetY = state.panCamStartY - dy / camera.zoom;
+    }
+  } else if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (state.lastPinchDist > 0) {
+      const delta = dist / state.lastPinchDist;
+      camera.targetZoom = Math.max(0.2, Math.min(5, camera.targetZoom * delta));
+    }
+    state.lastPinchDist = dist;
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  if (clickState.gameOver) return;
+  if (e.changedTouches.length === 1 && !state.touchMoved && e.touches.length === 0) {
+    const dt = performance.now() - state.touchStartTime;
+    if (dt < 300) {
+      const t = e.changedTouches[0];
+      const w = screenToWorld(t.clientX, t.clientY);
+      fire(w.x, w.y);
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+  }
+  if (e.touches.length < 2) state.lastPinchDist = 0;
+}, { passive: true });
+
+window.addEventListener('keydown', (e) => {
+  if (clickState.gameOver) return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    droplets.length = 0; live.length = 0; pools.length = 0;
+    wounds.length = 0; chunks.length = 0; mist.length = 0;
+    tiles.clear();
+    counters.stains = 0;
+  }
+});
+
+const phoneButtons = document.getElementById('phoneButtons');
+let hideTimer = null;
+
+function resetHideTimer() {
+  if (clickState.gameOver) return;
+  phoneButtons.classList.remove('hidden');
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => phoneButtons.classList.add('hidden'), 2500);
+}
+
+const flatIcon = `<svg viewBox="0 0 40 40">
+  <rect x="10" y="14" width="20" height="12" />
+  <path d="M10 20 L30 20" stroke-width="1" opacity="0.5" />
+</svg>`;
+const cubeIcon = `<svg viewBox="0 0 40 40">
+  <path d="M10 16 L20 10 L30 16 L30 28 L20 34 L10 28 Z" />
+  <path d="M10 16 L20 22 L30 16 M20 22 L20 34" stroke-width="1.5" opacity="0.6" />
+</svg>`;
+
+function updatePerspectiveIcon() {
+  document.getElementById('btnPerspective').innerHTML = state.view === 'top' ? flatIcon : cubeIcon;
+}
+
+document.getElementById('btnUrna').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (clickState.gameOver) return;
+  droplets.length = 0; live.length = 0; pools.length = 0;
+  wounds.length = 0; chunks.length = 0; mist.length = 0;
+  tiles.clear();
+  counters.stains = 0;
+  resetHideTimer();
+});
+
+document.getElementById('btnPerspective').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (clickState.gameOver) return;
+  state.view = state.view === 'top' ? 'side' : 'top';
+  updatePerspectiveIcon();
+  resetHideTimer();
+});
+
+window.addEventListener('touchstart', resetHideTimer, { passive: true });
+
+updatePerspectiveIcon();
+resize();
+grainPat = makeGrain(state.surface);
+requestAnimationFrame(tick);
+resetHideTimer();
+</script>
+</body>
+</html>
